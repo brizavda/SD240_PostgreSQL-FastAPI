@@ -4,10 +4,6 @@ from pydantic import BaseModel
 import shutil
 import os
 import uuid
-import orm.repo as repo # Para hacer consultas a la BD
-from sqlalchemy.orm import Session
-from orm.config import generador_session # Generador de sesiones
-
 
 # creación del servidor
 app = FastAPI()
@@ -65,21 +61,16 @@ def compras_usuario_por_id(id: int, id_compra: int):
     return compra
 
 @app.get("/usuarios/{id}")
-def usuario_por_id(id:int, sesion:Session=Depends(generador_session)):
-    print("Api consultando usuario por id")
-    return repo.usuario_por_id(sesion, id)
-
+def usuario_por_id(id: int):
+    print("buscando usuario por id:", id)
     # simulamos consulta a la base:
-    #return usuarios[id]
+    return usuarios[id]
 
 @app.get("/usuarios")
-def lista_usuarios(e1:int, e2:int, sesion:Session=Depends(generador_session)):
-    print("/usuarios?edad>{e1}&edad<{e2}")
-    return repo.usuarios_por_edad(sesion, e1, e2)
-#def lista_usuarios(*,lote:int=10,pag:int,orden:Optional[str]=None): #parametros de consulta ?lote=10&pag=1
-    #print("lote:",lote, " pag:", pag, " orden:", orden)
+def lista_usuarios(*,lote:int=10,pag:int,orden:Optional[str]=None): #parametros de consulta ?lote=10&pag=1
+    print("lote:",lote, " pag:", pag, " orden:", orden)
     #simulamos la consulta
-    #return usuarios
+    return usuarios
 
 @app.post("/usuarios")
 def guardar_usuario(usuario:UsuarioBase, parametro1:str):
@@ -96,50 +87,24 @@ def guardar_usuario(usuario:UsuarioBase, parametro1:str):
 
     return usr_nuevo
 
+#@app.put("/compras/{id}")
+#@app.put("/fotos/{id}")
 @app.put("/usuario/{id}")
-def actualizar_usuario(id:int, usuario:UsuarioBase):
-    #simulamos consulta
-    usr_act = usuarios[id]
-    #simulamos la actualización
-    usr_act["nombre"] = usuario.nombre
-    usr_act["edad"] = usuario.edad
-    usr_act["domicilio"] = usuario.domicilio    
-
-    return usr_act
+def actualizar_usuario(id:int,info_usuario:esquemas.UsuarioBase,sesion:Session=Depends(generador_sesion)):
+    return repo.actualiza_usuario(sesion,id,info_usuario)
     
 @app.delete("/usuario/{id}")
-def borrar_usuario(id:int, sesion:Session=Depends(generador_session)):
-    repo.borra_usuario_por_id(sesion,id)
-    return {"usuario_borrado", "ok"}
-
-# ---------- Consultas a Compras ----------
-
-@app.get("/compras/{id}")
-def compra_por_id(id:int, sesion:Session=Depends(generador_session)):
-    print("Api consultando compra por id")
-    return repo.compra_por_id(sesion, id)
-
-@app.get("/compras")
-def lista_compras(id_usuario:int, precio:float, sesion:Session=Depends(generador_session)):
-    print("/compras?id_usuario={id_usr}&precio={precio}")
-    return repo.compras_usuario_precio(sesion, id_usuario, precio)
-
-# ---------- Consultas a Fotos ----------
-
-@app.get("/fotos/{id}")
-def foto_por_id(id:int, sesion:Session=Depends(generador_session)):
-    print("Api consultando foto por id")
-    return repo.foto_por_id(sesion, id)
-
-@app.get("/fotos")
-def lista_fotos(sesion:Session=Depends(generador_session)):
-    print("API consultando todas las fotos")
-    return repo.lista_fotos(sesion)
-
-@app.get("/usuarios/{id}/fotos")
-def fotos_por_id_usr(id:int, sesion:Session=Depends(generador_session)):
-    print("API consultando fotos de usuario")
-    return repo.fotos_por_id_usuario(sesion,id)
+def borrar_usuario(id:int):
+    #simulamos una consulta
+    if id>=0 and id< len(usuarios):
+        usuario = usuarios[id]
+    else:
+        usuario = None
+    
+    if usuario is not None:
+        usuarios.remove(usuario)
+    
+    return {"status_borrado", "ok"}
 
 @app.post("/fotos")
 async def guardar_foto(titulo:str=Form(None), descripcion:str=Form(...), foto:UploadFile=File(...)):
